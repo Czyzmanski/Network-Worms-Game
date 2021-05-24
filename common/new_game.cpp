@@ -1,7 +1,7 @@
+#include "new_game.h"
 #include <netinet/in.h>
 #include <cstring>
 #include "crc32.h"
-#include "new_game.h"
 
 NewGame::NewGame(uint32_t event_no, uint32_t maxx, uint32_t maxy,
                  players_t &players) {
