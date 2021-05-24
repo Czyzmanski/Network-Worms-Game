@@ -11,10 +11,10 @@
 #include <poll.h>
 #include <sys/time.h>
 
-#include "client.h"
-#include "../common/options.h"
 #include "../common/event.h"
-
+#include "../common/options.h"
+#include "../common/update_from_player.h"
+#include "client.h"
 
 Client::Client(int argc, const char *argv[]) {
     if (argc == 1) {
