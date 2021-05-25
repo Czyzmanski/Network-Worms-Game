@@ -4,12 +4,10 @@
 #include "crc32.h"
 #include "player_eliminated.h"
 
-PlayerEliminated::PlayerEliminated(uint32_t event_no, uint8_t player_number,
-                                   std::string &player_name) {
+PlayerEliminated::PlayerEliminated(uint32_t event_no, uint8_t player_number) {
     this->event_type = PLAYER_ELIMINATED;
     this->event_no = event_no;
     this->player_number = player_number;
-    this->player_name = player_name;
 
     serialized_size = sizeof(len) + sizeof(event_no) + sizeof(event_type) +
                       sizeof(player_number) + sizeof(crc32);
@@ -17,16 +15,20 @@ PlayerEliminated::PlayerEliminated(uint32_t event_no, uint8_t player_number,
 }
 
 PlayerEliminated::PlayerEliminated(data_t &data, uint32_t len,
-                                   uint32_t event_no, uint8_t player_number,
-                                   std::string &player_name) {
+                                   uint32_t event_no,
+                                   player_by_number_t &player_by_number) {
     this->event_type = PLAYER_ELIMINATED;
     this->len = len;
     this->event_no = event_no;
-    this->player_number = player_number;
-    this->player_name = player_name;
 
     auto *buf = data.data();
-    memcpy(&crc32, buf, sizeof(crc32));
+    size_t pos = 0;
+
+    memcpy(&player_number, buf, sizeof(player_number));
+    pos += sizeof(player_number);
+    player_name = player_by_number[player_number];
+
+    memcpy(&crc32, buf + pos, sizeof(crc32));
     crc32 = ntohl(crc32);
 }
 

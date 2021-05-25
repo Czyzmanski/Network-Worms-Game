@@ -1,12 +1,15 @@
 #ifndef PROJ2_SERV_EVENT_H
 #define PROJ2_SERV_EVENT_H
 
+#include <map>
 #include "event.h"
 
 constexpr uint8_t NEW_GAME = 0;
 constexpr uint8_t PIXEL = 1;
 constexpr uint8_t PLAYER_ELIMINATED = 2;
 constexpr uint8_t GAME_OVER = 3;
+
+using player_by_number_t = std::map<uint8_t, std::string>;
 
 class ServEvent : public Event {
    public:
@@ -25,10 +28,10 @@ class ServEvent : public Event {
     [[nodiscard]] uint32_t get_crc32() const { return crc32; }
 
    protected:
-    uint32_t len;
-    uint32_t event_no;
-    uint8_t event_type;
-    uint32_t crc32;
+    uint32_t len{};
+    uint32_t event_no{};
+    uint8_t event_type{};
+    uint32_t crc32{};
 };
 
 using serv_event_ptr_t = std::shared_ptr<ServEvent>;

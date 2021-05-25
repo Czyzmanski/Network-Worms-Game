@@ -1,6 +1,7 @@
 #include <netinet/in.h>
 #include <cassert>
 #include <cstring>
+#include "../common/game_over.h"
 #include "../common/new_game.h"
 #include "../common/pixel.h"
 #include "../common/player_eliminated.h"
@@ -57,13 +58,15 @@ int main() {
            "NEW_GAME 640 480 Szymon Michał Adam Wiktoria");
 
     //////////////////////////////////////////////////////////////////////
+    player_by_number_t player_by_number;
+    player_by_number.insert({69, "Szymon"});
 
-    Pixel pixel{234234, 69, player_name, 323, 432};
+    Pixel pixel{234234, 69, 323, 432};
     serialized = pixel.serialize();
     assert(serialized.size() == pixel.get_serialized_size());
 
     data_t pixel_serialized_shortened;
-    for (size_t i = 10; i < serialized.size(); i++) {
+    for (size_t i = 9; i < serialized.size(); i++) {
         pixel_serialized_shortened.push_back(serialized[i]);
     }
 
@@ -77,35 +80,30 @@ int main() {
 
     memcpy(&event_type, buf + 8, 1);
 
-    uint8_t player_number;
-    memcpy(&player_number, buf + 9, 1);
-
     assert(len == pixel.get_len());
     assert(event_no == pixel.get_event_no());
     assert(event_type == pixel.get_event_type());
-    assert(player_number == pixel.get_player_number());
-    assert(player_name == pixel.get_player_name());
 
     Pixel pixel_deserialized{pixel_serialized_shortened, len, event_no,
-                             player_number, player_name};
+                             player_by_number};
     assert(pixel_deserialized.get_x() == 323);
     assert(pixel_deserialized.get_y() == 432);
     assert(pixel_deserialized.get_len() == len);
     assert(pixel_deserialized.get_event_no() == event_no);
     assert(pixel_deserialized.get_event_type() == event_type);
-    assert(pixel_deserialized.get_player_number() == player_number);
-    assert(pixel_deserialized.get_player_name() == player_name);
+    assert(pixel_deserialized.get_player_number() == 69);
+    assert(pixel_deserialized.get_player_name() == player_by_number[69]);
     assert(pixel_deserialized.get_crc32() == pixel.get_crc32());
     assert(pixel_deserialized.text_repr() == "PIXEL 323 432 Szymon");
 
     ////////////////////////////////////////////////////////////////////
 
-    PlayerEliminated player_eliminated{234234, 69, player_name};
+    PlayerEliminated player_eliminated{234234, 69};
     serialized = player_eliminated.serialize();
     assert(serialized.size() == player_eliminated.get_serialized_size());
 
     data_t player_eliminated_serialized_shortened;
-    for (size_t i = 10; i < serialized.size(); i++) {
+    for (size_t i = 9; i < serialized.size(); i++) {
         player_eliminated_serialized_shortened.push_back(serialized[i]);
     }
 
@@ -119,26 +117,56 @@ int main() {
 
     memcpy(&event_type, buf + 8, 1);
 
-    memcpy(&player_number, buf + 9, 1);
-
     assert(len == player_eliminated.get_len());
     assert(event_no == player_eliminated.get_event_no());
     assert(event_type == player_eliminated.get_event_type());
-    assert(player_number == player_eliminated.get_player_number());
-    assert(player_name == player_eliminated.get_player_name());
 
     PlayerEliminated player_eliminated_deserialized{
-        player_eliminated_serialized_shortened, len, event_no, player_number,
-        player_name};
+        player_eliminated_serialized_shortened, len, event_no,
+        player_by_number};
     assert(player_eliminated_deserialized.get_len() == len);
     assert(player_eliminated_deserialized.get_event_no() == event_no);
     assert(player_eliminated_deserialized.get_event_type() == event_type);
-    assert(player_eliminated_deserialized.get_player_number() == player_number);
-    assert(player_eliminated_deserialized.get_player_name() == player_name);
+    assert(player_eliminated_deserialized.get_player_number() == 69);
+    assert(player_eliminated_deserialized.get_player_name() ==
+           player_by_number[69]);
     assert(player_eliminated_deserialized.get_crc32() ==
            player_eliminated.get_crc32());
     assert(player_eliminated_deserialized.text_repr() ==
            "PLAYER_ELIMINATED Szymon");
+
+    ////////////////////////////////////////////////////////////////////
+
+    GameOver game_over{234234};
+    serialized = game_over.serialize();
+    assert(serialized.size() == game_over.get_serialized_size());
+
+    data_t game_over_serialized_shortened;
+    for (size_t i = 9; i < serialized.size(); i++) {
+        game_over_serialized_shortened.push_back(serialized[i]);
+    }
+
+    buf = serialized.data();
+
+    memcpy(&len, buf, 4);
+    len = ntohl(len);
+
+    memcpy(&event_no, buf + 4, 4);
+    event_no = ntohl(event_no);
+
+    memcpy(&event_type, buf + 8, 1);
+
+    assert(len == game_over.get_len());
+    assert(event_no == game_over.get_event_no());
+    assert(event_type == game_over.get_event_type());
+
+    GameOver game_over_deserialized{game_over_serialized_shortened, len,
+                                    event_no};
+    assert(game_over_deserialized.get_len() == len);
+    assert(game_over_deserialized.get_event_no() == event_no);
+    assert(game_over_deserialized.get_event_type() == event_type);
+    assert(game_over_deserialized.get_crc32() == game_over.get_crc32());
+    assert(game_over_deserialized.text_repr() == "GAME_OVER");
 
     return 0;
 }

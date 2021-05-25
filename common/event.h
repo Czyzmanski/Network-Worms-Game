@@ -21,7 +21,7 @@ class Event {
 
    protected:
     data_t serialized;
-    uint32_t serialized_size;
+    uint32_t serialized_size{};
 };
 
 #endif  // PROJ2_EVENT_H

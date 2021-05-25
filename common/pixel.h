@@ -5,10 +5,10 @@
 
 class Pixel : public ServEvent {
    public:
-    Pixel(uint32_t event_no, uint8_t player_number, std::string& player_name,
-          uint32_t x, uint32_t y);
+    Pixel(uint32_t event_no, uint8_t player_number, uint32_t x, uint32_t y);
 
-    Pixel(data_t& data, uint32_t len, uint32_t event_no, uint8_t player_number, std::string& player_name);
+    Pixel(data_t& data, uint32_t len, uint32_t event_no,
+          player_by_number_t &player_by_number);
 
     ~Pixel() override = default;
 

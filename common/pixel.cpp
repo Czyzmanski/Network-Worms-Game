@@ -3,12 +3,10 @@
 #include <cstring>
 #include "crc32.h"
 
-Pixel::Pixel(uint32_t event_no, uint8_t player_number, std::string &player_name,
-             uint32_t x, uint32_t y) {
+Pixel::Pixel(uint32_t event_no, uint8_t player_number, uint32_t x, uint32_t y) {
     this->event_type = PIXEL;
     this->event_no = event_no;
     this->player_number = player_number;
-    this->player_name = player_name;
     this->x = x;
     this->y = y;
 
@@ -19,17 +17,19 @@ Pixel::Pixel(uint32_t event_no, uint8_t player_number, std::string &player_name,
 }
 
 Pixel::Pixel(data_t &data, uint32_t len, uint32_t event_no,
-             uint8_t player_number, std::string &player_name) {
+             player_by_number_t &player_by_number) {
     this->event_type = PIXEL;
     this->len = len;
     this->event_no = event_no;
-    this->player_number = player_number;
-    this->player_name = player_name;
 
     auto *buf = data.data();
     size_t pos = 0;
 
-    memcpy(&x, buf, sizeof(x));
+    memcpy(&player_number, buf, sizeof(player_number));
+    pos += sizeof(player_number);
+    player_name = player_by_number[player_number];
+
+    memcpy(&x, buf + pos, sizeof(x));
     pos += sizeof(x);
 
     memcpy(&y, buf + pos, sizeof(y));

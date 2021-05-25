@@ -5,11 +5,10 @@
 
 class PlayerEliminated : public ServEvent {
    public:
-    PlayerEliminated(uint32_t event_no, uint8_t player_number,
-                     std::string& player_name);
+    PlayerEliminated(uint32_t event_no, uint8_t player_number);
 
     PlayerEliminated(data_t &data, uint32_t len, uint32_t event_no,
-                     uint8_t player_number, std::string& player_name);
+                     player_by_number_t &player_by_number);
 
     ~PlayerEliminated() override = default;
 
