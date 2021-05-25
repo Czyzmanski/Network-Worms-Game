@@ -4,8 +4,8 @@
 #include <string>
 #include <map>
 
-using options_t = std::map<const std::string, const std::string>;
+using options_t = std::map<const std::string, std::string>;
 
-options_t parse_options(int argc, const char *argv[], const char *optstring);
+options_t parse_options(int argc, char *const argv[]);
 
 #endif //PROJ2_OPTIONS_H

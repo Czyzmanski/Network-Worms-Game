@@ -3,6 +3,7 @@
 #include <cstring>
 #include "../common/game_over.h"
 #include "../common/new_game.h"
+#include "../common/options.h"
 #include "../common/pixel.h"
 #include "../common/player_eliminated.h"
 #include "../common/update_from_player.h"
@@ -167,6 +168,23 @@ int main() {
     assert(game_over_deserialized.get_event_type() == event_type);
     assert(game_over_deserialized.get_crc32() == game_over.get_crc32());
     assert(game_over_deserialized.text_repr() == "GAME_OVER");
+
+    ////////////////////////////////////////////////////////////////////////
+
+    // ./screen-worms-client game_server [-n player_name] [-p n] [-i gui_server] [-r n]
+
+    int argc = 5;
+    std::string binary_file = "screen-worms-client";
+    std::string n = "-n";
+    player_name = "Szymon";
+    std::string p = "-p";
+    std::string port = "342234";
+    char *const argv[] = {&binary_file[0], &n[0], &player_name[0], &p[0], &port[0]};
+    options_t options = parse_options(argc, argv);
+    assert(options.at("player_name") == "Szymon");
+    assert(options.at("game_server_port") == "342234");
+    assert(options.at("gui_server") == "localhost");
+    assert(options.at("gui_server_port") == "20210");
 
     return 0;
 }

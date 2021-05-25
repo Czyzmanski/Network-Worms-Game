@@ -20,12 +20,14 @@
 #include "../common/update_from_player.h"
 #include "client.h"
 
-Client::Client(int argc, const char *argv[]) {
+Client::Client(int argc, char *const argv[]) {
     if (argc == 1) {
-        // TODO: print error with the correct usage format
+        std::cerr << "Usage: ./screen-worms-client game_server [-n player_name] [-p "
+                     "n] [-i gui_server] [-r n]"
+                  << std::endl;
         exit(EXIT_FAILURE);
     }
-    options_t options = parse_options(argc - 2, argv + 2, ":n:p::i::r::");
+    options_t options = parse_options(argc - 1, argv + 1);
 
     struct timeval tv {};
     gettimeofday(&tv, nullptr);
@@ -206,7 +208,6 @@ void Client::pass_data_between_game_server_and_gui_server() {
             } else if (event_type == GAME_OVER) {
                 if (!new_game_exp) {
                     new_game_exp = true;
-                    next_expected_event_no = 0;
                 }
             } else {
                 // Unrecognized event type.

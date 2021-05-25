@@ -6,7 +6,7 @@
 
 class Client {
    public:
-    Client(int argc, const char *argv[]);
+    Client(int argc, char *const argv[]);
     void start();
 
    private:
@@ -19,16 +19,16 @@ class Client {
     std::string player_name;
     bool new_game_exp;
     uint32_t curr_game_id;
-    events_t events{};  // Events occurred in the current game.
+    events_t events{};  // Events occurred during the current game.
     player_by_number_t player_by_number{};
     turn_direction_by_key_event_t turn_direction_by_key_event{};
 
     static constexpr nfds_t FDS_COUNT = 3;
-    struct pollfd timer_fd {};
-    struct pollfd gui_serv_fd {};
-    struct pollfd game_serv_fd {};
-    struct sockaddr game_serv_addr {};
-    socklen_t game_serv_addr_len{};
+    struct pollfd timer_fd{};
+    struct pollfd gui_serv_fd{};
+    struct pollfd game_serv_fd{};
+    struct sockaddr game_serv_addr{};
+    socklen_t game_serv_addr_len;
 
     void init_timer();
     void connect_with_gui_server(const std::string &server, const std::string &port);
