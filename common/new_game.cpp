@@ -1,18 +1,18 @@
-#include "new_game.h"
 #include <netinet/in.h>
 #include <cstring>
-#include "crc32.h"
 
-NewGame::NewGame(uint32_t event_no, uint32_t maxx, uint32_t maxy,
-                 players_t &players) {
+#include "crc32.h"
+#include "new_game.h"
+
+NewGame::NewGame(uint32_t event_no, uint32_t maxx, uint32_t maxy, players_t &players) {
     this->event_type = NEW_GAME;
     this->event_no = event_no;
     this->maxx = maxx;
     this->maxy = maxy;
     this->players = players;
 
-    serialized_size = sizeof(len) + sizeof(event_no) + sizeof(event_type) +
-                      sizeof(maxx) + sizeof(maxy) + sizeof(crc32);
+    serialized_size = sizeof(len) + sizeof(event_no) + sizeof(event_type) + sizeof(maxx) +
+                      sizeof(maxy) + sizeof(crc32);
     for (auto &player : players) {
         serialized_size += player.length() + 1;
     }
@@ -104,8 +104,7 @@ data_t NewGame::serialize() {
 }
 
 std::string NewGame::text_repr() {
-    std::string repr =
-        "NEW_GAME " + std::to_string(maxx) + " " + std::to_string(maxy);
+    std::string repr = "NEW_GAME " + std::to_string(maxx) + " " + std::to_string(maxy);
     for (auto &player : players) {
         repr += " " + player;
     }

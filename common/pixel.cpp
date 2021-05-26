@@ -1,7 +1,8 @@
-#include "pixel.h"
 #include <netinet/in.h>
 #include <cstring>
+
 #include "crc32.h"
+#include "pixel.h"
 
 Pixel::Pixel(uint32_t event_no, uint8_t player_number, uint32_t x, uint32_t y) {
     this->event_type = PIXEL;

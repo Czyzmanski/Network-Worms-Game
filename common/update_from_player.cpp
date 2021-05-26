@@ -1,6 +1,7 @@
-#include "update_from_player.h"
 #include <netinet/in.h>
 #include <cstring>
+
+#include "update_from_player.h"
 
 UpdateFromPlayer::UpdateFromPlayer(uint64_t session_id, uint8_t turn_direction,
                                    uint32_t next_expected_event_no,

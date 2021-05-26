@@ -2,7 +2,12 @@
 #define PROJ2_CLIENT_H
 
 #include <set>
+#include <map>
 #include <string>
+#include <poll.h>
+#include <sys/socket.h>
+
+#include "../common/serv_event.h"
 
 class Client {
    public:

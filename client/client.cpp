@@ -1,18 +1,14 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-
+#include <iostream>
 #include <netdb.h>
 #include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <sys/timerfd.h>
-
-#include <poll.h>
 #include <sys/time.h>
-#include <iostream>
 
 #include "../common/crc32.h"
-#include "../common/event.h"
 #include "../common/new_game.h"
 #include "../common/options.h"
 #include "../common/pixel.h"

@@ -1,6 +1,7 @@
-#include "options.h"
 #include <getopt.h>
 #include <iostream>
+
+#include "options.h"
 
 options_t parse_options(int argc, char *const argv[]) {
     options_t options;

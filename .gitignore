@@ -1,0 +1,6 @@
+cmake-build-debug
+.idea
+*.txt
+*.o
+*.py
+screen-worms-client
