@@ -4,6 +4,6 @@
 #include <cstdint>
 #include <cstddef>
 
-uint32_t compute_crc32(const uint8_t *data, size_t len);
+uint32_t compute_crc32(const void *buf, size_t size);
 
 #endif //PROJ2_CRC32_H
