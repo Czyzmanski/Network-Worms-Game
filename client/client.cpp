@@ -25,6 +25,10 @@ Client::Client(int argc, char *const argv[]) {
         exit(EXIT_FAILURE);
     }
     options_t options = parse_options(argc - 1, argv + 1);
+    if (!is_player_name_valid(options.at("player_name"))) {
+        print_invalid_value_msg_and_exit("Invalid player name: " + options.at("player_name"));
+        exit(EXIT_FAILURE);
+    }
 
     struct timeval tv {};
     gettimeofday(&tv, nullptr);

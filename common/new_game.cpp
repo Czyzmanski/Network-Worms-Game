@@ -3,6 +3,7 @@
 
 #include "crc32.h"
 #include "new_game.h"
+#include "utils.h"
 
 NewGame::NewGame(uint32_t event_no, uint32_t maxx, uint32_t maxy, players_t &players) {
     this->event_type = NEW_GAME;
@@ -41,8 +42,11 @@ NewGame::NewGame(data_t &data, uint32_t len, uint32_t event_no) {
             player += (char)buf[pos];
             pos++;
         }
+        if (!is_player_name_valid(player)) {
+            print_invalid_value_msg_and_exit("Invalid player name: " + player);
+            exit(EXIT_FAILURE);
+        }
         players.push_back(player);
-
         pos++;
     }
 
