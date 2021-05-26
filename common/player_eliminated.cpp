@@ -3,6 +3,7 @@
 
 #include "crc32.h"
 #include "player_eliminated.h"
+#include "utils.h"
 
 PlayerEliminated::PlayerEliminated(uint32_t event_no, uint8_t player_number) {
     this->event_type = PLAYER_ELIMINATED;
@@ -26,6 +27,9 @@ PlayerEliminated::PlayerEliminated(data_t &data, uint32_t len,
 
     memcpy(&player_number, buf, sizeof(player_number));
     pos += sizeof(player_number);
+    if (player_by_number.find(player_number) == player_by_number.end()) {
+        print_invalid_value_msg_and_exit("Invalid player number: " + std::to_string(player_number));
+    }
     player_name = player_by_number[player_number];
 
     memcpy(&crc32, buf + pos, sizeof(crc32));

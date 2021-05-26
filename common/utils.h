@@ -5,4 +5,6 @@
 
 void print_error_msg_and_exit(std::string msg);
 
+void print_invalid_value_msg_and_exit(std::string msg);
+
 #endif  // PROJ2_UTILS_H

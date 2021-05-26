@@ -20,10 +20,10 @@ new_game.o: common/new_game.cpp common/new_game.h common/crc32.h
 options.o: common/options.cpp common/options.h
 	g++ -Wall -Wextra -O2 -std=c++17 common/options.cpp -c
 
-pixel.o: common/pixel.cpp common/pixel.h common/crc32.h
+pixel.o: common/pixel.cpp common/pixel.h common/crc32.h common/utils.h
 	g++ -Wall -Wextra -O2 -std=c++17 common/pixel.cpp -c
 
-player_eliminated.o: common/player_eliminated.cpp common/player_eliminated.h common/crc32.h
+player_eliminated.o: common/player_eliminated.cpp common/player_eliminated.h common/crc32.h common/utils.h
 	g++ -Wall -Wextra -O2 -std=c++17 common/player_eliminated.cpp -c
 
 update_from_player.o: common/update_from_player.cpp common/update_from_player.h
