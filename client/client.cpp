@@ -35,6 +35,8 @@ Client::Client(int argc, char *const argv[]) {
     player_name = options.at("player_name");
     left_key_pressed = false;
     right_key_pressed = false;
+    curr_game_maxx = 0;
+    curr_game_maxy = 0;
     new_game_exp = true;
     curr_game_id = 0;
 
@@ -81,7 +83,7 @@ void Client::start() {
 void Client::send_data_to_game_server() {
     UpdateFromPlayer update{session_id, turn_direction, next_expected_event_no, player_name};
     data_t serialized = update.serialize();
-    std::cout << "Sending to game server: " << update.text_repr();
+    std::cout << "Sending to game server: " << update.text_repr() << std::endl;
     if (send(game_serv_fd.fd, serialized.data(), serialized.size(), 0) < 0) {
         print_error_msg_and_exit("Sending data to game server failed");
     }
@@ -179,6 +181,8 @@ void Client::pass_data_between_game_server_and_gui_server() {
             if (event_type == NEW_GAME) {
                 if (new_game_exp) {
                     NewGame new_game{data, len, event_no};
+                    curr_game_maxx = new_game.get_maxx();
+                    curr_game_maxy = new_game.get_maxy();
                     new_game_exp = false;
                     player_by_number.clear();
                     players_t players = new_game.get_players();
@@ -192,6 +196,14 @@ void Client::pass_data_between_game_server_and_gui_server() {
             } else if (event_type == PIXEL) {
                 if (!new_game_exp) {
                     Pixel pixel{data, len, event_no, player_by_number};
+                    if (curr_game_maxx <= pixel.get_x()) {
+                        print_error_msg_and_exit("Invalid x: " +
+                                                 std::to_string(pixel.get_x()));
+                    }
+                    if (curr_game_maxy <= pixel.get_y()) {
+                        print_error_msg_and_exit("Invalid y: " +
+                                                 std::to_string(pixel.get_y()));
+                    }
                     std::string text_repr = pixel.text_repr();
                     send_data_to_gui_server(text_repr);
                     next_expected_event_no++;
@@ -239,29 +251,23 @@ void Client::read_data_from_gui_server() {
             if (valid_key_event) {
                 if (key_event == "LEFT_KEY_DOWN") {
                     left_key_pressed = true;
-                }
-                else if (key_event == "RIGHT_KEY_DOWN") {
+                } else if (key_event == "RIGHT_KEY_DOWN") {
                     right_key_pressed = true;
-                }
-                else if (key_event == "LEFT_KEY_UP") {
+                } else if (key_event == "LEFT_KEY_UP") {
                     left_key_pressed = false;
-                }
-                else if (key_event == "RIGHT_KEY_UP") {
+                } else if (key_event == "RIGHT_KEY_UP") {
                     right_key_pressed = false;
                 }
                 uint8_t new_turn_direction = turn_direction_by_key_event[key_event];
                 if (new_turn_direction == GO_STRAIGHT) {
                     if (left_key_pressed) {
                         turn_direction = TURN_LEFT;
-                    }
-                    else if (right_key_pressed) {
+                    } else if (right_key_pressed) {
                         turn_direction = TURN_RIGHT;
-                    }
-                    else {
+                    } else {
                         turn_direction = GO_STRAIGHT;
                     }
-                }
-                else {
+                } else {
                     turn_direction = new_turn_direction;
                 }
             }

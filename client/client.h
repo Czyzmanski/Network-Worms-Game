@@ -28,6 +28,8 @@ class Client {
     std::string player_name;
     bool left_key_pressed;
     bool right_key_pressed;
+    uint32_t curr_game_maxx;
+    uint32_t curr_game_maxy;
     bool new_game_exp;
     uint32_t curr_game_id;
     games_t games{};
