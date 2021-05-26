@@ -57,8 +57,7 @@ data_t UpdateFromPlayer::serialize() {
     memcpy(buf + pos, &turn_direction_net, sizeof(turn_direction_net));
     pos += sizeof(turn_direction_net);
 
-    memcpy(buf + pos, &next_expected_event_no_net,
-           sizeof(next_expected_event_no_net));
+    memcpy(buf + pos, &next_expected_event_no_net, sizeof(next_expected_event_no_net));
     pos += sizeof(next_expected_event_no_net);
 
     memcpy(buf + pos, player_name_net.data(), player_name_net.size());
@@ -80,4 +79,10 @@ uint32_t UpdateFromPlayer::get_next_expected_event_no() const {
 
 std::string UpdateFromPlayer::get_player_name() const {
     return std::string(player_name.begin(), player_name.end());
+}
+std::string UpdateFromPlayer::text_repr() const {
+    return "session_id: " + std::to_string(session_id) +
+           ", turn_direction: " + std::to_string(turn_direction) +
+           ", next_expected_event_no: " + std::to_string(next_expected_event_no) +
+           ", player_name: " + std::string(player_name.begin(), player_name.end());
 }

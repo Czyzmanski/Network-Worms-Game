@@ -23,6 +23,8 @@ public:
     [[nodiscard]] uint32_t get_next_expected_event_no() const;
 
     [[nodiscard]] std::string get_player_name() const;
+
+    std::string text_repr() const;
 private:
     using player_name_t = std::vector<uint8_t>;
 

@@ -1,12 +1,13 @@
+#include <netdb.h>
+#include <netinet/tcp.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/timerfd.h>
+#include <unistd.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
-#include <netdb.h>
-#include <netinet/tcp.h>
-#include <sys/socket.h>
-#include <sys/timerfd.h>
-#include <sys/time.h>
 
 #include "../common/crc32.h"
 #include "../common/new_game.h"
@@ -14,6 +15,7 @@
 #include "../common/pixel.h"
 #include "../common/player_eliminated.h"
 #include "../common/update_from_player.h"
+#include "../common/utils.h"
 #include "client.h"
 
 Client::Client(int argc, char *const argv[]) {
@@ -31,6 +33,8 @@ Client::Client(int argc, char *const argv[]) {
     turn_direction = 0;
     next_expected_event_no = 0;
     player_name = options.at("player_name");
+    left_key_pressed = false;
+    right_key_pressed = false;
     new_game_exp = true;
     curr_game_id = 0;
 
@@ -41,10 +45,10 @@ Client::Client(int argc, char *const argv[]) {
     connect_with_gui_server(options.at("gui_server"), options.at("gui_server_port"));
     init_game_server_sockfd(argv[1], options.at("game_server_port"));
 
-    turn_direction_by_key_event.insert({"LEFT_KEY_DOWN", 2});
-    turn_direction_by_key_event.insert({"LEFT_KEY_UP", 0});
-    turn_direction_by_key_event.insert({"RIGHT_KEY_DOWN", 1});
-    turn_direction_by_key_event.insert({"RIGHT_KEY_UP", 0});
+    turn_direction_by_key_event.insert({"LEFT_KEY_DOWN", TURN_LEFT});
+    turn_direction_by_key_event.insert({"LEFT_KEY_UP", GO_STRAIGHT});
+    turn_direction_by_key_event.insert({"RIGHT_KEY_DOWN", TURN_RIGHT});
+    turn_direction_by_key_event.insert({"RIGHT_KEY_UP", GO_STRAIGHT});
 }
 
 void Client::start() {
@@ -53,13 +57,16 @@ void Client::start() {
     while (true) {
         int poll_count = poll(fds, FDS_COUNT, -1);
         if (poll_count == -1) {
-            perror("poll failed");
-            exit(EXIT_FAILURE);
+            print_error_msg_and_exit("Poll failed");
         }
 
         for (auto &fd : fds) {
             if (fd.revents & POLLIN) {
                 if (fd.fd == timer_fd.fd) {
+                    char dummy_buf[1024];
+                    if (read(fd.fd, dummy_buf, 1024) < 0) {
+                        print_error_msg_and_exit("timerfd read failed");
+                    }
                     send_data_to_game_server();
                 } else if (fd.fd == gui_serv_fd.fd) {
                     read_data_from_gui_server();
@@ -74,11 +81,9 @@ void Client::start() {
 void Client::send_data_to_game_server() {
     UpdateFromPlayer update{session_id, turn_direction, next_expected_event_no, player_name};
     data_t serialized = update.serialize();
-    int rv = sendto(game_serv_fd.fd, serialized.data(), serialized.size(), 0, &game_serv_addr,
-                    game_serv_addr_len);
-    if (rv != 0) {
-        perror("sending to game server failed");
-        exit(EXIT_FAILURE);
+    std::cout << "Sending to game server: " << update.text_repr();
+    if (send(game_serv_fd.fd, serialized.data(), serialized.size(), 0) < 0) {
+        print_error_msg_and_exit("Sending data to game server failed");
     }
 }
 
@@ -91,8 +96,7 @@ void Client::send_data_to_gui_server(std::string &msg) const {
     do {
         sent = send(gui_serv_fd.fd, buf + pos, buf_len, 0);
         if (sent < 0) {
-            perror("sending data to gui server failed");
-            exit(EXIT_FAILURE);
+            print_error_msg_and_exit("Sending data to gui server failed");
         }
         pos += sent;
         buf_len -= sent;
@@ -102,11 +106,9 @@ void Client::send_data_to_gui_server(std::string &msg) const {
 void Client::pass_data_between_game_server_and_gui_server() {
     size_t buf_len = 550;
     uint8_t buf[buf_len];
-    ssize_t read =
-        recvfrom(game_serv_fd.fd, buf, buf_len, 0, &game_serv_addr, &game_serv_addr_len);
+    ssize_t read = recv(game_serv_fd.fd, buf, buf_len, 0);
     if (read < 0) {
-        perror("error while reading from game server");
-        exit(EXIT_FAILURE);
+        print_error_msg_and_exit("Error while reading from game server");
     }
 
     if (read <= sizeof(uint32_t)) {
@@ -119,17 +121,17 @@ void Client::pass_data_between_game_server_and_gui_server() {
     game_id = ntohl(game_id);
     pos += sizeof(game_id);
 
-    if (events.empty()) {
+    if (games.empty()) {
         new_game_exp = true;
         curr_game_id = game_id;
         next_expected_event_no = 0;
-        events.insert(game_id);
+        games.insert(game_id);
     } else if (game_id != curr_game_id) {
-        if (events.find(game_id) == events.end()) {
+        if (games.find(game_id) == games.end()) {
             new_game_exp = true;
             curr_game_id = game_id;
             next_expected_event_no = 0;
-            events.insert(game_id);
+            games.insert(game_id);
         } else {
             // Datagram from a previous game.
             return;
@@ -204,34 +206,30 @@ void Client::pass_data_between_game_server_and_gui_server() {
             } else if (event_type == GAME_OVER) {
                 if (!new_game_exp) {
                     new_game_exp = true;
+                    next_expected_event_no++;  // TODO: think
                 }
             } else {
                 // Unrecognized event type.
                 break;
             }
         }
-        pos += len + sizeof(uint32_t);
+        pos = record_start + sizeof(len) + len + sizeof(uint32_t);
     }
 }
 
 void Client::read_data_from_gui_server() {
     data_t data;
     ssize_t read;
-    do {
-        size_t buf_len = 1024;
-        uint8_t buf[buf_len];
-        read = recv(gui_serv_fd.fd, buf, buf_len, MSG_DONTWAIT);
-        if (read < 0) {
-            if (errno != EAGAIN && errno != EWOULDBLOCK) {
-                perror("error while reading from gui server");
-                exit(EXIT_FAILURE);
-            }
-        } else {
-            for (size_t i = 0; i < read; i++) {
-                data.push_back(buf[i]);
-            }
+    size_t buf_len = 1024;
+    uint8_t buf[buf_len];
+    read = recv(gui_serv_fd.fd, buf, buf_len, 0);
+    if (read < 0) {
+        print_error_msg_and_exit("Error while reading from gui server");
+    } else {
+        for (size_t i = 0; i < read; i++) {
+            data.push_back(buf[i]);
         }
-    } while (read > 0);
+    }
 
     std::string key_event;
     for (auto &b : data) {
@@ -239,9 +237,34 @@ void Client::read_data_from_gui_server() {
             bool valid_key_event = turn_direction_by_key_event.find(key_event) !=
                                    turn_direction_by_key_event.end();
             if (valid_key_event) {
-                turn_direction = turn_direction_by_key_event[key_event];
+                if (key_event == "LEFT_KEY_DOWN") {
+                    left_key_pressed = true;
+                }
+                else if (key_event == "RIGHT_KEY_DOWN") {
+                    right_key_pressed = true;
+                }
+                else if (key_event == "LEFT_KEY_UP") {
+                    left_key_pressed = false;
+                }
+                else if (key_event == "RIGHT_KEY_UP") {
+                    right_key_pressed = false;
+                }
+                uint8_t new_turn_direction = turn_direction_by_key_event[key_event];
+                if (new_turn_direction == GO_STRAIGHT) {
+                    if (left_key_pressed) {
+                        turn_direction = TURN_LEFT;
+                    }
+                    else if (right_key_pressed) {
+                        turn_direction = TURN_RIGHT;
+                    }
+                    else {
+                        turn_direction = GO_STRAIGHT;
+                    }
+                }
+                else {
+                    turn_direction = new_turn_direction;
+                }
             }
-
             key_event.clear();
         } else {
             key_event += (char)b;
@@ -251,15 +274,13 @@ void Client::read_data_from_gui_server() {
 
 void Client::init_timer() {
     if ((timer_fd.fd = timerfd_create(CLOCK_MONOTONIC, 0)) == -1) {
-        std::cerr << "timerfd_create failed" << std::endl;
-        exit(EXIT_FAILURE);
+        print_error_msg_and_exit("timerfd_create failed");
     }
 
-    struct timespec it_value = {.tv_sec = 0, .tv_nsec = 30000};
+    struct timespec it_value = {.tv_sec = 0, .tv_nsec = 30000000};
     struct itimerspec new_value = {.it_interval = it_value, .it_value = it_value};
     if (timerfd_settime(timer_fd.fd, TFD_TIMER_ABSTIME, &new_value, nullptr) == -1) {
-        std::cerr << "timerfd_settime failed" << std::endl;
-        exit(EXIT_FAILURE);
+        print_error_msg_and_exit("timerfd_settime failed");
     }
 }
 
@@ -268,32 +289,24 @@ void Client::init_game_server_sockfd(const std::string &server, const std::strin
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_DGRAM;
-    hints.ai_flags = AI_PASSIVE;
     hints.ai_protocol = IPPROTO_UDP;
 
     struct addrinfo *server_info;
     if (getaddrinfo(server.c_str(), port.c_str(), &hints, &server_info) != 0) {
-        perror("gui server getaddrinfo failed");
-        exit(EXIT_FAILURE);
+        print_error_msg_and_exit("Game server getaddrinfo failed");
     }
 
-    struct addrinfo *node = server_info;
-    while (node != nullptr) {
-        if ((game_serv_fd.fd =
-                 socket(node->ai_family, node->ai_socktype, node->ai_protocol)) != -1) {
-            break;
-        }
-        perror("game server socket creation failed");
-        node = node->ai_next;
+    game_serv_fd.fd =
+        socket(server_info->ai_family, server_info->ai_socktype, server_info->ai_protocol);
+    if (game_serv_fd.fd < 0) {
+        print_error_msg_and_exit("Game server socket creation failed");
     }
 
-    if (node == nullptr) {
-        fprintf(stderr, "failed to create any game server socket\n");
-        exit(EXIT_FAILURE);
+    if (connect(game_serv_fd.fd, server_info->ai_addr, server_info->ai_addrlen) < 0) {
+        print_error_msg_and_exit("Connecting with game server failed");
     }
 
-    game_serv_addr = *node->ai_addr;
-    game_serv_addr_len = node->ai_addrlen;
+    std::cout << "Connecting with game server..." << std::endl;
 
     freeaddrinfo(server_info);
 }
@@ -303,42 +316,29 @@ void Client::connect_with_gui_server(const std::string &server, const std::strin
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_PASSIVE;
     hints.ai_protocol = IPPROTO_TCP;
 
     struct addrinfo *server_info;
     if (getaddrinfo(server.c_str(), port.c_str(), &hints, &server_info) != 0) {
-        perror("gui server getaddrinfo failed");
-        exit(EXIT_FAILURE);
+        print_error_msg_and_exit("Gui server getaddrinfo failed");
     }
 
-    struct addrinfo *node = server_info;
-    while (node != nullptr) {
-        gui_serv_fd.fd =
-            socket(node->ai_family, node->ai_socktype | SOCK_NONBLOCK, node->ai_protocol);
-        if (gui_serv_fd.fd != -1) {
-            if (connect(gui_serv_fd.fd, node->ai_addr, node->ai_addrlen) != -1) {
-                break;
-            }
-            perror("connecting with gui server failed");
-        } else {
-            perror("gui server socket creation failed");
-        }
-        node = node->ai_next;
-    }
-
-    if (node == nullptr) {
-        std::cerr << "failed to connect with gui server" << std::endl;
-        exit(EXIT_FAILURE);
+    gui_serv_fd.fd =
+        socket(server_info->ai_family, server_info->ai_socktype, server_info->ai_protocol);
+    if (gui_serv_fd.fd < 0) {
+        print_error_msg_and_exit("Gui server socket creation failed");
     }
 
     int optval = 1;
     if (setsockopt(gui_serv_fd.fd, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) != 0) {
-        perror("setting TCP_NODELAY failed");
-        exit(EXIT_FAILURE);
+        print_error_msg_and_exit("Setting TCP_NODELAY failed");
     }
 
-    std::cout << "connecting with gui server..." << std::endl;
+    if (connect(gui_serv_fd.fd, server_info->ai_addr, server_info->ai_addrlen) < 0) {
+        print_error_msg_and_exit("Connecting with gui server failed");
+    }
+
+    std::cout << "Connecting with gui server..." << std::endl;
 
     freeaddrinfo(server_info);
 }
