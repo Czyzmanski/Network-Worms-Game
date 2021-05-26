@@ -114,7 +114,7 @@ void Client::pass_data_between_game_server_and_gui_server() {
     if (read < 0) {
         print_error_msg_and_exit("Error while reading from game server");
     }
-    if (read <= sizeof(uint32_t)) {
+    if ((size_t)read <= sizeof(uint32_t)) {
         return;
     }
 
@@ -140,16 +140,16 @@ void Client::pass_data_between_game_server_and_gui_server() {
         }
     }
 
-    while (pos < read) {
+    while (pos < (size_t)read) {
         uint32_t record_start = pos;
         uint32_t len;
-        if (pos + sizeof(len) >= read) {
+        if (pos + sizeof(len) >= (size_t)read) {
             break;
         }
         memcpy(&len, buf + pos, sizeof(len));
         len = ntohl(len);
         pos += sizeof(len);
-        if (pos + len + sizeof(uint32_t) > read) {
+        if (pos + len + sizeof(uint32_t) > (size_t)read) {
             break;
         }
 
@@ -240,14 +240,13 @@ void Client::read_data_from_gui_server() {
         if (read < 0) {
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
                 break;
-            }
-            else {
+            } else {
                 print_error_msg_and_exit("Error while reading data from gui server");
             }
         } else if (read == 0) {
             print_error_msg_and_exit("Gui server disconnected");
         } else {
-            for (size_t i = 0; i < read; i++) {
+            for (size_t i = 0; i < (size_t)read; i++) {
                 data.push_back(buf[i]);
             }
         }
