@@ -13,8 +13,7 @@ Pixel::Pixel(uint32_t event_no, uint8_t player_number, uint32_t x, uint32_t y) {
     this->y = y;
 
     serialized_size = sizeof(len) + sizeof(event_no) + sizeof(event_type) +
-                      sizeof(player_number) + sizeof(x) + sizeof(y) +
-                      sizeof(crc32);
+                      sizeof(player_number) + sizeof(x) + sizeof(y) + sizeof(crc32);
     len = serialized_size - sizeof(len) - sizeof(crc32);
 }
 
@@ -30,7 +29,8 @@ Pixel::Pixel(data_t &data, uint32_t len, uint32_t event_no,
     memcpy(&player_number, buf, sizeof(player_number));
     pos += sizeof(player_number);
     if (player_by_number.find(player_number) == player_by_number.end()) {
-        print_invalid_value_msg_and_exit("Invalid player number: " + std::to_string(player_number));
+        print_invalid_value_msg_and_exit("Invalid player number: " +
+                                         std::to_string(player_number));
     }
     player_name = player_by_number[player_number];
 
@@ -90,6 +90,5 @@ data_t Pixel::serialize() {
 }
 
 std::string Pixel::text_repr() {
-    return "PIXEL " + std::to_string(x) + " " + std::to_string(y) + " " +
-           player_name;
+    return "PIXEL " + std::to_string(x) + " " + std::to_string(y) + " " + player_name;
 }

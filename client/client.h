@@ -1,11 +1,11 @@
 #ifndef PROJ2_CLIENT_H
 #define PROJ2_CLIENT_H
 
-#include <set>
-#include <map>
-#include <string>
 #include <poll.h>
 #include <sys/socket.h>
+#include <map>
+#include <set>
+#include <string>
 
 #include "../common/serv_event.h"
 

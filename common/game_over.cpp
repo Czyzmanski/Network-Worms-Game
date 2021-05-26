@@ -8,8 +8,7 @@ GameOver::GameOver(uint32_t event_no) {
     this->event_type = GAME_OVER;
     this->event_no = event_no;
 
-    serialized_size =
-        sizeof(len) + sizeof(event_no) + sizeof(event_type) + sizeof(crc32);
+    serialized_size = sizeof(len) + sizeof(event_no) + sizeof(event_type) + sizeof(crc32);
     len = serialized_size - sizeof(len) - sizeof(crc32);
 }
 

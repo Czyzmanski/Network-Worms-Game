@@ -15,8 +15,7 @@ PlayerEliminated::PlayerEliminated(uint32_t event_no, uint8_t player_number) {
     len = serialized_size - sizeof(len) - sizeof(crc32);
 }
 
-PlayerEliminated::PlayerEliminated(data_t &data, uint32_t len,
-                                   uint32_t event_no,
+PlayerEliminated::PlayerEliminated(data_t &data, uint32_t len, uint32_t event_no,
                                    player_by_number_t &player_by_number) {
     this->event_type = PLAYER_ELIMINATED;
     this->len = len;
@@ -28,7 +27,8 @@ PlayerEliminated::PlayerEliminated(data_t &data, uint32_t len,
     memcpy(&player_number, buf, sizeof(player_number));
     pos += sizeof(player_number);
     if (player_by_number.find(player_number) == player_by_number.end()) {
-        print_invalid_value_msg_and_exit("Invalid player number: " + std::to_string(player_number));
+        print_invalid_value_msg_and_exit("Invalid player number: " +
+                                         std::to_string(player_number));
     }
     player_name = player_by_number[player_number];
 
@@ -70,6 +70,4 @@ data_t PlayerEliminated::serialize() {
     return serialized;
 }
 
-std::string PlayerEliminated::text_repr() {
-    return "PLAYER_ELIMINATED " + player_name;
-}
+std::string PlayerEliminated::text_repr() { return "PLAYER_ELIMINATED " + player_name; }

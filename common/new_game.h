@@ -7,8 +7,7 @@ using players_t = std::vector<std::string>;
 
 class NewGame : public ServEvent {
    public:
-    NewGame(uint32_t event_no, uint32_t maxx, uint32_t maxy,
-            players_t &players);
+    NewGame(uint32_t event_no, uint32_t maxx, uint32_t maxy, players_t &players);
 
     NewGame(data_t &data, uint32_t len, uint32_t event_no);
 

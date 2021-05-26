@@ -15,9 +15,7 @@ class Event {
 
     virtual data_t serialize() = 0;
 
-    [[nodiscard]] uint32_t get_serialized_size() const {
-        return serialized_size;
-    }
+    [[nodiscard]] uint32_t get_serialized_size() const { return serialized_size; }
 
    protected:
     data_t serialized;
