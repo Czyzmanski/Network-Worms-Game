@@ -44,7 +44,7 @@ Client::Client(int argc, char *const argv[]) {
     game_serv_fd.events = POLLIN;
 
     connect_with_gui_server(options.at("gui_server"), options.at("gui_server_port"));
-    init_game_server_sockfd(argv[1], options.at("game_server_port"));
+    connect_with_game_server(argv[1], options.at("game_server_port"));
 
     turn_direction_by_key_event.insert({"LEFT_KEY_DOWN", TURN_LEFT});
     turn_direction_by_key_event.insert({"LEFT_KEY_UP", GO_STRAIGHT});
@@ -82,7 +82,6 @@ void Client::start() {
 void Client::send_data_to_game_server() {
     UpdateFromPlayer update{session_id, turn_direction, next_expected_event_no, player_name};
     data_t serialized = update.serialize();
-    std::cout << "Sending to game server: " << update.text_repr() << std::endl;
     if (send(game_serv_fd.fd, serialized.data(), serialized.size(), 0) < 0) {
         print_error_msg_and_exit("Sending data to game server failed");
     }
@@ -111,7 +110,6 @@ void Client::pass_data_between_game_server_and_gui_server() {
     if (read < 0) {
         print_error_msg_and_exit("Error while reading from game server");
     }
-
     if (read <= sizeof(uint32_t)) {
         return;
     }
@@ -121,7 +119,6 @@ void Client::pass_data_between_game_server_and_gui_server() {
     memcpy(&game_id, buf, sizeof(game_id));
     game_id = ntohl(game_id);
     pos += sizeof(game_id);
-
     if (games.empty()) {
         new_game_exp = true;
         curr_game_id = game_id;
@@ -229,20 +226,28 @@ void Client::pass_data_between_game_server_and_gui_server() {
 }
 
 void Client::read_data_from_gui_server() {
+    size_t buf_len = 2048;
     data_t data;
+    data.reserve(2048);
     ssize_t read;
-    size_t buf_len = 1024;
-    uint8_t buf[buf_len];
-    read = recv(gui_serv_fd.fd, buf, buf_len, 0);
-    if (read < 0) {
-        print_error_msg_and_exit("Error while reading from gui server");
-    } else if (read == 0) {
-        print_error_msg_and_exit("Gui server disconnected");
-    } else {
-        for (size_t i = 0; i < read; i++) {
-            data.push_back(buf[i]);
+    do {
+        uint8_t buf[buf_len];
+        read = recv(gui_serv_fd.fd, buf, buf_len, MSG_DONTWAIT);
+        if (read < 0) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                break;
+            }
+            else {
+                print_error_msg_and_exit("Error while reading data from gui server");
+            }
+        } else if (read == 0) {
+            print_error_msg_and_exit("Gui server disconnected");
+        } else {
+            for (size_t i = 0; i < read; i++) {
+                data.push_back(buf[i]);
+            }
         }
-    }
+    } while (read > 0);
 
     std::string key_event;
     for (auto &b : data) {
@@ -283,7 +288,6 @@ void Client::init_timer() {
     if ((timer_fd.fd = timerfd_create(CLOCK_MONOTONIC, 0)) == -1) {
         print_error_msg_and_exit("timerfd_create failed");
     }
-
     struct timespec it_value = {.tv_sec = 0, .tv_nsec = 30000000};
     struct itimerspec new_value = {.it_interval = it_value, .it_value = it_value};
     if (timerfd_settime(timer_fd.fd, TFD_TIMER_ABSTIME, &new_value, nullptr) == -1) {
@@ -291,61 +295,56 @@ void Client::init_timer() {
     }
 }
 
-void Client::init_game_server_sockfd(const std::string &server, const std::string &port) {
+void Client::connect_with_game_server(const std::string &server, const std::string &port) {
+    std::cout << "Connecting with game server..." << std::endl;
+
     struct addrinfo hints {};
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_DGRAM;
     hints.ai_protocol = IPPROTO_UDP;
-
     struct addrinfo *server_info;
     if (getaddrinfo(server.c_str(), port.c_str(), &hints, &server_info) != 0) {
         print_error_msg_and_exit("Game server getaddrinfo failed");
     }
-
     game_serv_fd.fd =
         socket(server_info->ai_family, server_info->ai_socktype, server_info->ai_protocol);
     if (game_serv_fd.fd < 0) {
         print_error_msg_and_exit("Game server socket creation failed");
     }
-
     if (connect(game_serv_fd.fd, server_info->ai_addr, server_info->ai_addrlen) < 0) {
         print_error_msg_and_exit("Connecting with game server failed");
     }
-
-    std::cout << "Connecting with game server..." << std::endl;
-
     freeaddrinfo(server_info);
+
+    std::cout << "Connected" << std::endl;
 }
 
 void Client::connect_with_gui_server(const std::string &server, const std::string &port) {
+    std::cout << "Connecting with gui server..." << std::endl;
+
     struct addrinfo hints {};
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol = IPPROTO_TCP;
-
     struct addrinfo *server_info;
     if (getaddrinfo(server.c_str(), port.c_str(), &hints, &server_info) != 0) {
         print_error_msg_and_exit("Gui server getaddrinfo failed");
     }
-
     gui_serv_fd.fd =
         socket(server_info->ai_family, server_info->ai_socktype, server_info->ai_protocol);
     if (gui_serv_fd.fd < 0) {
         print_error_msg_and_exit("Gui server socket creation failed");
     }
-
     int optval = 1;
     if (setsockopt(gui_serv_fd.fd, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) != 0) {
         print_error_msg_and_exit("Setting TCP_NODELAY failed");
     }
-
     if (connect(gui_serv_fd.fd, server_info->ai_addr, server_info->ai_addrlen) < 0) {
         print_error_msg_and_exit("Connecting with gui server failed");
     }
-
-    std::cout << "Connecting with gui server..." << std::endl;
-
     freeaddrinfo(server_info);
+
+    std::cout << "Connected" << std::endl;
 }

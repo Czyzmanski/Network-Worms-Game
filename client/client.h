@@ -43,7 +43,7 @@ class Client {
 
     void init_timer();
     void connect_with_gui_server(const std::string &server, const std::string &port);
-    void init_game_server_sockfd(const std::string &server, const std::string &port);
+    void connect_with_game_server(const std::string &server, const std::string &port);
     void send_data_to_game_server();
     void pass_data_between_game_server_and_gui_server();
     void read_data_from_gui_server();
