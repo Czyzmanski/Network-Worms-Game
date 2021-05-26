@@ -4,7 +4,6 @@
 #include <sys/time.h>
 #include <sys/timerfd.h>
 #include <unistd.h>
-#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
@@ -218,7 +217,7 @@ void Client::pass_data_between_game_server_and_gui_server() {
             } else if (event_type == GAME_OVER) {
                 if (!new_game_exp) {
                     new_game_exp = true;
-                    next_expected_event_no++;  // TODO: think
+                    next_expected_event_no++;
                 }
             } else {
                 // Unrecognized event type.
@@ -237,6 +236,8 @@ void Client::read_data_from_gui_server() {
     read = recv(gui_serv_fd.fd, buf, buf_len, 0);
     if (read < 0) {
         print_error_msg_and_exit("Error while reading from gui server");
+    } else if (read == 0) {
+        print_error_msg_and_exit("Gui server disconnected");
     } else {
         for (size_t i = 0; i < read; i++) {
             data.push_back(buf[i]);
